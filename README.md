@@ -45,6 +45,7 @@ Three layers, checked in this order (`premium_npc_access.lua`, `IsPremiumNpcAllo
 - `creature_template` entry 900201.
 - Summons next to the player, follows for `PREMIUM_NPC_CONFIG.HEIRLOOM_VENDOR.SUMMON_DURATION_SECONDS` (120s by default), then despawns (or despawns early if a different premium NPC is summoned first).
 - Sells every heirloom-quality (`Quality = 7`) weapon/armor item in `item_template` at its existing `BuyPrice`, with no extra currency, catalog, or unlock gating - a plain `npc_vendor` list (`sql/db-world/04_heirloom_vendor.sql`), no custom purchase logic. Excludes two known non-heirloom anomalies in the base game data (entries 44090, 38691).
+- Also repairs equipped gear (`UNIT_NPC_FLAG_REPAIR`), at the normal gold cost the engine computes per item's own durability loss.
 
 ### Class Trainer
 

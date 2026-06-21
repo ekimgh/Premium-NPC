@@ -8,9 +8,13 @@
 -- through potentially hostile areas and needs the fuller set - without
 -- it, a following summon gets pulled into combat by nearby hostile
 -- creatures and abandons the player to run back to its spawn point.
+--
+-- npcflag 4224 = UNIT_NPC_FLAG_VENDOR (0x80) | UNIT_NPC_FLAG_REPAIR
+-- (0x1000): also repairs equipped gear, at the normal gold cost the
+-- engine computes per item's own durability loss - no extra data needed.
 DELETE FROM `creature_template` WHERE `entry` = 900201;
 INSERT INTO `creature_template` (`entry`, `name`, `subname`, `minlevel`, `maxlevel`, `faction`, `npcflag`, `unit_class`, `unit_flags`, `RegenHealth`) VALUES
-(900201, 'Heirloom Vendor', 'Premium', 80, 80, 2027, 128, 8, 770, 1);
+(900201, 'Heirloom Vendor', 'Premium', 80, 80, 2027, 4224, 8, 770, 1);
 
 DELETE FROM `creature_template_model` WHERE `CreatureID` = 900201;
 INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, `DisplayScale`, `Probability`) VALUES
