@@ -12,8 +12,14 @@
     @module premium_npc_summon
 ]]
 
--- player guid -> currently active summoned Creature (any NPC type)
-local activeSummon = {}
+-- player guid -> currently active summoned NPC's ObjectGuid (any NPC type)
+--
+-- Stores the GUID, not the Creature object itself: calling any method on a
+-- Lua reference to an already-despawned creature throws a hard error in
+-- ALE ("bad self ... invalidated object"), it doesn't return nil/false.
+-- Map:GetWorldObject(guid) is the safe way to re-resolve it later - it
+-- returns nil on its own if the object's gone, no error.
+local activeSummonGuid = {}
 
 local TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT = 4
 
@@ -28,9 +34,12 @@ local TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT = 4
 function SummonPremiumNpc(player, entry, durationSeconds)
     local guid = player:GetGUIDLow()
 
-    local existing = activeSummon[guid]
-    if existing and existing:IsInWorld() then
-        existing:DespawnOrUnsummon(0)
+    local existingGuid = activeSummonGuid[guid]
+    if existingGuid then
+        local existing = player:GetMap():GetWorldObject(existingGuid)
+        if existing then
+            existing:DespawnOrUnsummon(0)
+        end
     end
 
     local npc = player:SpawnCreature(
@@ -40,13 +49,13 @@ function SummonPremiumNpc(player, entry, durationSeconds)
         durationSeconds * 1000
     )
     if not npc then
-        activeSummon[guid] = nil
+        activeSummonGuid[guid] = nil
         return false
     end
 
     npc:SetFaction(player:GetFaction())
     npc:MoveFollow(player, 2, 0)
 
-    activeSummon[guid] = npc
+    activeSummonGuid[guid] = npc:GetGUID()
     return true
 end
