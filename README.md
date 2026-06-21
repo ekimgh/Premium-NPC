@@ -53,3 +53,11 @@ Three layers, checked in this order (`premium_npc_access.lua`, `IsPremiumNpcAllo
 - Unlike the other two NPCs, this one needs no new SQL at all: a player can only ever use their own class's spells, so there's nothing to aggregate the way Profession Trainer aggregates every profession into one NPC. Instead, `PREMIUM_NPC_CONFIG.CLASS_TRAINER.ENTRIES` maps the player's class and faction directly to a real, existing class trainer creature (e.g. Warrior Alliance -> entry 5479) and summons a temporary copy of it - same mechanic as the other two, just pointed at real data instead of a custom entry. Death Knight uses a single entry for both factions (the Ebon Hold trainer isn't faction-split like the others).
 - Summons next to the player, follows for `PREMIUM_NPC_CONFIG.CLASS_TRAINER.SUMMON_DURATION_SECONDS` (120s by default), then despawns (or despawns early if a different premium NPC is summoned first).
 - Offers training plus "unlearn talents" and "Dual Talent Specialization" - real class trainers' own dedicated gossip menus include both, unlike profession trainers (confirmed by inspecting several real trainers' `gossip_menu_option` rows directly).
+
+### Teleporter
+
+- Trigger: `.premium_npc teleporter`
+- Model borrowed from the real Archmage Xylem (the Dalaran-sewers city teleporter NPC, entry 8379) - his own row is never modified. Unlike that model choice, his actual teleport behavior isn't reusable data (his `gossip_menu_id` is just the generic shared pool), so this NPC's destination menu is built entirely in Lua (`teleporter.lua`'s `OnGossipHello`/`OnGossipSelect`, registered via `RegisterCreatureGossipEvent`) rather than native trainer/vendor tables.
+- `creature_template` entry 900202.
+- Summons next to the player, follows for `PREMIUM_NPC_CONFIG.TELEPORTER.SUMMON_DURATION_SECONDS` (120s by default), then despawns (or despawns early if a different premium NPC is summoned first).
+- Lists only the player's own faction's four major cities (no zones/dungeons/raids) - `PREMIUM_NPC_CONFIG.TELEPORTER.DESTINATIONS`. Coordinates were verified against this server's own `game_graveyard` table and real in-city creature positions rather than taken on faith from any reference source.

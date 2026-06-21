@@ -68,4 +68,37 @@ PREMIUM_NPC_CONFIG = {
             [11] = { [0] = 5504,  [1] = 3033 },  -- Druid
         },
     },
+
+    TELEPORTER = {
+        KEY = "teleporter",
+        NPC_ID = 900202,
+        SUMMON_DURATION_SECONDS = 120,
+        ENABLED = true,
+
+        -- Major-city destinations only (no zones/dungeons/raids), shown
+        -- faction-gated - an account only ever sees its own faction's
+        -- four cities. Coordinates verified against this server's own
+        -- game_graveyard table and real in-city creature positions, not
+        -- taken on faith from any reference source. Exodar and
+        -- Silvermoon City genuinely use map 530 (the same map ID as
+        -- Outland) - a real, confirmed quirk of how their Burning
+        -- Crusade-era zones were added, not a typo.
+        --
+        -- [teamId] = ordered list of {name, map, x, y, z, o}. teamId:
+        -- 0 Alliance, 1 Horde.
+        DESTINATIONS = {
+            [0] = {
+                { name = "Stormwind",  map = 0,   x = -8842.09, y = 626.358,  z = 94.0867,  o = 3.61363 },
+                { name = "Ironforge",  map = 0,   x = -4900.47, y = -962.585, z = 501.455,  o = 5.40538 },
+                { name = "Darnassus",  map = 1,   x = 9869.91,  y = 2493.58,  z = 1315.88,  o = 2.78897 },
+                { name = "Exodar",     map = 530, x = -3864.92, y = -11643.7, z = -137.644, o = 5.50862 },
+            },
+            [1] = {
+                { name = "Orgrimmar",       map = 1,   x = 1601.08,  y = -4378.69, z = 9.9846,   o = 2.14362 },
+                { name = "Thunder Bluff",   map = 1,   x = -1274.45, y = 71.8601,  z = 128.159,  o = 2.80623 },
+                { name = "Undercity",       map = 0,   x = 1633.75,  y = 240.167,  z = -43.1034, o = 6.26128 },
+                { name = "Silvermoon City", map = 530, x = 9738.28,  y = -7454.19, z = 13.5605,  o = 0.043914 },
+            },
+        },
+    },
 }
