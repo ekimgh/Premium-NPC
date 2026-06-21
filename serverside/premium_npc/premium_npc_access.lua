@@ -40,3 +40,41 @@ function IsPremiumNpcAllowed(player, npcConfig)
 
     return true
 end
+
+--- Cheap check for whether ANY premium NPC type could possibly be
+-- allowed for this player right now - for callers that don't care which
+-- specific type, just whether there's at least one (e.g. deciding
+-- whether to grant the premium menu item at all). Runs at most one query
+-- regardless of how many NPC types exist, instead of calling
+-- IsPremiumNpcAllowed (one query each, when per-account control is on)
+-- once per type just to answer that.
+--- @param player Player
+--- @return boolean enabled
+function IsPremiumEnabled(player)
+    if not PREMIUM_NPC_CONFIG.ENABLED then
+        return false
+    end
+
+    local anyTypeEnabled = false
+    for _, npcConfig in pairs(PREMIUM_NPC_CONFIG) do
+        if type(npcConfig) == "table" and npcConfig.ENABLED then
+            anyTypeEnabled = true
+            break
+        end
+    end
+    if not anyTypeEnabled then
+        return false
+    end
+
+    if not PREMIUM_NPC_CONFIG.PER_ACCOUNT_ACCESS_CONTROL_ENABLED then
+        return true
+    end
+
+    local accountId = player:GetAccountId()
+    local result = CharDBQuery(string.format(
+        "SELECT 1 FROM premium_npc_account_access WHERE account_id = %d LIMIT 1",
+        accountId
+    ))
+
+    return result ~= nil
+end

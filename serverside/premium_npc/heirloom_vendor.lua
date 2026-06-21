@@ -23,18 +23,24 @@ dofile("lua_scripts/premium_npc/premium_npc_config.lua")
 
 local CONFIG = PREMIUM_NPC_CONFIG.HEIRLOOM_VENDOR
 
-local function OnPlayerCommand(event, player, command)
-    if command ~= "premium_npc heirloom" then
-        return
-    end
-
+--- Checks access and summons the Heirloom Vendor if allowed, messaging
+-- the player either way. Shared by the .premium_npc heirloom command and
+-- premium_menu_item.lua's item-based menu.
+function TryHeirloomVendor(player)
     local allowed, reason = IsPremiumNpcAllowed(player, CONFIG)
     if allowed then
         SummonPremiumNpc(player, CONFIG.NPC_ID, CONFIG.SUMMON_DURATION_SECONDS)
     else
         player:SendBroadcastMessage(reason)
     end
+end
 
+local function OnPlayerCommand(event, player, command)
+    if command ~= "premium_npc heirloom" then
+        return
+    end
+
+    TryHeirloomVendor(player)
     return false
 end
 

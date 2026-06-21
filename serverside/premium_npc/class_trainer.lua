@@ -21,11 +21,10 @@ dofile("lua_scripts/premium_npc/premium_npc_config.lua")
 
 local CONFIG = PREMIUM_NPC_CONFIG.CLASS_TRAINER
 
-local function OnPlayerCommand(event, player, command)
-    if command ~= "premium_npc class" then
-        return
-    end
-
+--- Checks access and summons the player's own class's trainer if
+-- allowed, messaging the player either way. Shared by the .premium_npc
+-- class command and premium_menu_item.lua's item-based menu.
+function TryClassTrainer(player)
     local allowed, reason = IsPremiumNpcAllowed(player, CONFIG)
     if allowed then
         local byTeam = CONFIG.ENTRIES[player:GetClass()]
@@ -38,7 +37,14 @@ local function OnPlayerCommand(event, player, command)
     else
         player:SendBroadcastMessage(reason)
     end
+end
 
+local function OnPlayerCommand(event, player, command)
+    if command ~= "premium_npc class" then
+        return
+    end
+
+    TryClassTrainer(player)
     return false
 end
 

@@ -21,12 +21,17 @@ Three layers, checked in this order (`premium_npc_access.lua`, `IsPremiumNpcAllo
 2. Each NPC type's own `ENABLED` flag (e.g. `PREMIUM_NPC_CONFIG.PROFESSION_TRAINER.ENABLED`).
 3. `PREMIUM_NPC_CONFIG.PER_ACCOUNT_ACCESS_CONTROL_ENABLED` - if `true`, an account additionally needs a row in `premium_npc_account_access` (`account_id`, `npc_key`) matching that NPC type's `KEY` (e.g. `"profession"`), or it's denied. If `false` (the default), layers 1-2 alone decide, and every account has access to every enabled NPC type.
 
+`IsPremiumEnabled(player)` (same file) answers the cheaper question "does this player have access to *any* premium NPC type at all" in at most one query, for callers that don't care which specific type (e.g. deciding whether to grant the premium menu item below) - it doesn't replace `IsPremiumNpcAllowed` for an actual per-type decision.
+
+Note: access is only checked when summoning - once an NPC is out, anyone nearby (not just the summoning player) can interact with it. This is a known, deliberate gap, not a bug - see the Premium-NPC access scope decision in this project's notes if revisiting it.
+
 ## Architecture
 
 - `premium_npc_summon.lua` - the shared summon/follow mechanic, used by every NPC type. Spawns a `TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT` copy of the given creature entry, makes it follow the player, matches its faction to the player's, and despawns any premium NPC that player already has active first.
 - `premium_npc_config.lua` - per-NPC-type settings (entry ID, summon duration, enabled flag, access-control key) plus the two global toggles described above.
-- `premium_npc_access.lua` - `IsPremiumNpcAllowed(player, npcConfig)`, the three-layer access check described above.
-- One file per NPC type (e.g. `profession_trainer.lua`) - owns only that NPC's summon trigger (the dot-command) and the access check before summoning. Whatever that NPC actually *does* once summoned (trainer spells, vendor items, gossip, etc.) is configured entirely through standard AzerothCore data (`npc_trainer`, `npc_vendor`, gossip tables) against its own `creature_template` entry, not custom Lua logic.
+- `premium_npc_access.lua` - `IsPremiumNpcAllowed(player, npcConfig)` and `IsPremiumEnabled(player)`, described above.
+- One file per NPC type (e.g. `profession_trainer.lua`) - owns that NPC's summon trigger (the dot-command) and exposes a shared `Try<Name>(player)` function (e.g. `TryProfessionTrainer`) that does the actual access-check-then-summon work. The dot-command handler and `premium_menu_item.lua`'s item menu both just call that same function, rather than duplicating the check-then-summon logic in each caller. Whatever the NPC actually *does* once summoned (trainer spells, vendor items, gossip, etc.) is configured entirely through standard AzerothCore data (`npc_trainer`, `npc_vendor`, gossip tables) against its own `creature_template` entry, not custom Lua logic.
+- `premium_menu_item.lua` - the premium menu item described below.
 
 ## Current NPCs
 
@@ -61,3 +66,10 @@ Three layers, checked in this order (`premium_npc_access.lua`, `IsPremiumNpcAllo
 - `creature_template` entry 900202.
 - Summons next to the player, follows for `PREMIUM_NPC_CONFIG.TELEPORTER.SUMMON_DURATION_SECONDS` (120s by default), then despawns (or despawns early if a different premium NPC is summoned first).
 - Lists only the player's own faction's four major cities (no zones/dungeons/raids) - `PREMIUM_NPC_CONFIG.TELEPORTER.DESTINATIONS`. Coordinates were verified against this server's own `game_graveyard` table and real in-city creature positions rather than taken on faith from any reference source.
+
+## Premium Menu item
+
+- Trigger to receive it: `.premium_npc menu` - grants one copy (`maxcount` 1) if the player has access to at least one premium NPC type, denies otherwise.
+- Item entry 38691, repurposed from a confirmed-orphaned Blizzard debug leftover ("Ancestral Claymore" - no stats, never sold/looted/quest-rewarded anywhere in the base game data) rather than a new `item_template` row - see `sql/db-world/06_premium_menu_item.sql`. Quality stays 7 (heirloom-flashy) deliberately; only `InventoryType`, class/subclass, and the icon changed, which is what makes it usable instead of equippable.
+- Right-click ("Use") opens a gossip menu pre-filtered to only the NPC types the player's account currently has access to (so there's nothing to select that would just be denied afterward). Selecting one calls that NPC type's own shared `Try<Name>(player)` function - the exact same access-check-then-summon logic its dot-command uses, not a separate copy.
+- The item's attached placeholder spell (Hearthstone's own, 8690 - required only because the client won't offer "Use" at all without *some* on-use spell attached) never actually casts - both gossip hooks return `false`, which suppresses it.

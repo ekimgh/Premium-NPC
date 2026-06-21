@@ -27,18 +27,24 @@ dofile("lua_scripts/premium_npc/premium_npc_config.lua")
 
 local CONFIG = PREMIUM_NPC_CONFIG.PROFESSION_TRAINER
 
-local function OnPlayerCommand(event, player, command)
-    if command ~= "premium_npc profession" then
-        return
-    end
-
+--- Checks access and summons the Profession Trainer if allowed, messaging
+-- the player either way. Shared by the .premium_npc profession command
+-- and premium_menu_item.lua's item-based menu.
+function TryProfessionTrainer(player)
     local allowed, reason = IsPremiumNpcAllowed(player, CONFIG)
     if allowed then
         SummonPremiumNpc(player, CONFIG.NPC_ID, CONFIG.SUMMON_DURATION_SECONDS)
     else
         player:SendBroadcastMessage(reason)
     end
+end
 
+local function OnPlayerCommand(event, player, command)
+    if command ~= "premium_npc profession" then
+        return
+    end
+
+    TryProfessionTrainer(player)
     return false
 end
 
