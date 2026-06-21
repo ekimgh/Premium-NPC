@@ -1,41 +1,58 @@
--- Repurposes item_template entry 38691 ("Ancestral Claymore") into the
--- premium menu item - a usable item that opens a gossip menu listing
--- every premium NPC type the player's account has access to. Chosen
--- instead of a new item_template row because this entry is a confirmed
--- Blizzard debug/test leftover: it has no stats and isn't sold, looted,
--- or quest-rewarded anywhere in the base game data (the same reason it
--- was excluded from the Heirloom Vendor's catalog - see
--- sql/db-world/04_heirloom_vendor.sql) - completely orphaned, so
--- repurposing it carries no risk of affecting any real player or vendor.
+-- Repurposes item_template entry 9017 into the premium menu item - a
+-- usable item that opens a gossip menu listing every premium NPC type
+-- the player's account has access to. Confirmed orphaned the same way
+-- as the Heirloom Vendor's catalog exclusions (see
+-- sql/db-world/04_heirloom_vendor.sql): zero references in any
+-- creature/gameobject/item loot table, npc_vendor, quest reward, or any
+-- other loot template in this server's world DB.
 --
--- class/subclass changed from Weapon/Two-Hand Sword to Miscellaneous/
--- Junk, and InventoryType to 0 (non-equippable) - this is what actually
--- makes "Use" available instead of "Equip" on right-click. Quality stays
--- 7 (heirloom) deliberately - Quality only controls the tooltip
--- color/glow, it's independent of InventoryType/equippability, so there's
--- no conflict keeping the heirloom-flashy look on a non-equippable item.
--- DisplayID 1143 is a plain book/tome icon (same one mod-premium's own
--- equivalent item uses), not the original claymore model.
---
--- spellid_1/spelltrigger_1 attach Hearthstone's own real spell (8690) as
--- a placeholder, purely because the client only offers "Use" at all for
--- an item with a real on-use spell attached - premium_menu_item.lua's
--- gossip hooks return false on every interaction, which suppresses this
--- spell from ever actually casting (confirmed via
--- WorldSession::HandleUseItemOpcode in core source); it only matters as
--- a safe fallback if that script somehow failed to load.
-UPDATE `item_template` SET
-    `name` = 'Premium Menu',
-    `class` = 15,
-    `subclass` = 0,
-    `InventoryType` = 0,
-    `DisplayID` = 1143,
-    `spellid_1` = 8690,
-    `spelltrigger_1` = 0,
-    `spellcharges_1` = 0,
-    `maxcount` = 1,
-    `description` = 'Use to access your premium services.'
-WHERE `entry` = 38691;
+-- This entry's *original* client-side Item.dbc record already has
+-- InventoryType 0 (non-equippable) and DisplayInfoID 1143 (a plain
+-- book/tome icon) - confirmed by reading the client's own cached
+-- Item.dbc directly. Client and server data already agree, so no binary
+-- Item.dbc patch is needed at all.
+
+REPLACE INTO `item_template` (
+    `entry`, `class`, `subclass`, `SoundOverrideSubclass`, `name`, `displayid`, `Quality`, `Flags`, `FlagsExtra`,
+    `BuyCount`, `BuyPrice`, `SellPrice`, `InventoryType`, `AllowableClass`, `AllowableRace`, `ItemLevel`,
+    `RequiredLevel`, `RequiredSkill`, `RequiredSkillRank`, `requiredspell`, `requiredhonorrank`, `RequiredCityRank`,
+    `RequiredReputationFaction`, `RequiredReputationRank`, `maxcount`, `stackable`, `ContainerSlots`,
+    `stat_type1`, `stat_value1`, `stat_type2`, `stat_value2`, `stat_type3`, `stat_value3`, `stat_type4`, `stat_value4`,
+    `stat_type5`, `stat_value5`, `stat_type6`, `stat_value6`, `stat_type7`, `stat_value7`, `stat_type8`, `stat_value8`,
+    `stat_type9`, `stat_value9`, `stat_type10`, `stat_value10`, `ScalingStatDistribution`, `ScalingStatValue`,
+    `dmg_min1`, `dmg_max1`, `dmg_type1`, `dmg_min2`, `dmg_max2`, `dmg_type2`, `armor`, `holy_res`, `fire_res`,
+    `nature_res`, `frost_res`, `shadow_res`, `arcane_res`, `delay`, `ammo_type`, `RangedModRange`,
+    `spellid_1`, `spelltrigger_1`, `spellcharges_1`, `spellppmRate_1`, `spellcooldown_1`, `spellcategory_1`, `spellcategorycooldown_1`,
+    `spellid_2`, `spelltrigger_2`, `spellcharges_2`, `spellppmRate_2`, `spellcooldown_2`, `spellcategory_2`, `spellcategorycooldown_2`,
+    `spellid_3`, `spelltrigger_3`, `spellcharges_3`, `spellppmRate_3`, `spellcooldown_3`, `spellcategory_3`, `spellcategorycooldown_3`,
+    `spellid_4`, `spelltrigger_4`, `spellcharges_4`, `spellppmRate_4`, `spellcooldown_4`, `spellcategory_4`, `spellcategorycooldown_4`,
+    `spellid_5`, `spelltrigger_5`, `spellcharges_5`, `spellppmRate_5`, `spellcooldown_5`, `spellcategory_5`, `spellcategorycooldown_5`,
+    `bonding`, `description`, `PageText`, `LanguageID`, `PageMaterial`, `startquest`, `lockid`, `Material`, `sheath`,
+    `RandomProperty`, `RandomSuffix`, `block`, `itemset`, `MaxDurability`, `area`, `Map`, `BagFamily`, `TotemCategory`,
+    `socketColor_1`, `socketContent_1`, `socketColor_2`, `socketContent_2`, `socketColor_3`, `socketContent_3`,
+    `socketBonus`, `GemProperties`, `RequiredDisenchantSkill`, `ArmorDamageModifier`, `duration`, `ItemLimitCategory`,
+    `HolidayId`, `ScriptName`, `DisenchantID`, `FoodType`, `minMoneyLoot`, `maxMoneyLoot`, `flagsCustom`, `VerifiedBuild`
+) VALUES (
+    9017, 9, 0, -1, 'Premium Menu', 1143, 7, 0, 0,
+    1, 0, 0, 0, -1, -1, 0,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
+    5407, 0, 0, 0, -1, 0, -1,
+    0, 0, 0, 0, -1, 0, -1,
+    0, 0, 0, 0, -1, 0, -1,
+    0, 0, 0, 0, -1, 0, -1,
+    0, 0, 0, 0, -1, 0, -1,
+    1, 'Use to access your premium services.', 0, 0, 0, 0, 0, -1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    0, 0, -1, 0, 0, 0,
+    0, '', 0, 0, 0, 0, 0, 0
+);
 
 -- Gossip header text shown above the menu (premium_menu_item.lua's
 -- OnGossipHello). A new row scoped to our own use, not a reused real one.

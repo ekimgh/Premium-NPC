@@ -1,12 +1,19 @@
 --[[
     Premium Menu Item
 
-    A usable item ("Premium Menu", entry 38691 - repurposed from a
-    confirmed-orphaned Blizzard debug leftover rather than a new
+    A usable item ("Premium Menu", entry 9017 - repurposed from a
+    confirmed-orphaned item ("Codex of Holy Protection III", zero
+    references in any loot/vendor/quest-reward table) rather than a new
     item_template row, see sql/db-world/06_premium_menu_item.sql) that
     opens a gossip menu listing every premium NPC type the player's
     account currently has access to, as a convenience alternative to
     typing each .premium_npc <type> command directly.
+
+    This entry's *original* client-side Item.dbc record already has
+    InventoryType 0 (non-equippable) and the book/tome icon used below -
+    client and server data already agree, so no binary Item.dbc patch is
+    needed (unlike an earlier attempt with a different entry that really
+    was a two-handed sword client-side, which left a stale sword icon).
 
     The menu is filtered at build time: a type only appears if
     IsPremiumNpcAllowed (premium_npc_access.lua) currently allows it for
@@ -20,27 +27,34 @@
 
     Both gossip hooks return false, which (confirmed via
     WorldSession::HandleUseItemOpcode in core source) suppresses the
-    item's attached placeholder spell from ever actually casting.
+    item's attached spell (5407, "Segra Darkthorn Effect" - an unused,
+    harmless leftover, only attached because the client requires some
+    on-use spell to offer "Use" at all) from ever actually casting.
 
-    Trigger for granting the item itself: .premium_npc menu - gives one
-    copy if the player has access to at least one premium NPC type
-    (reusing the same per-type access checks above), denies otherwise.
+    Granted via .premium_npc menu (gives one copy if the player has
+    access to at least one premium NPC type, reusing the same per-type
+    access checks above, denies otherwise) or automatically on a new
+    character's first ever login, if premium is enabled for that account
+    at that moment.
 
     @module premium_menu_item
 ]]
 
 dofile("lua_scripts/premium_npc/premium_npc_config.lua")
 
-local ITEM_ENTRY = 38691
+local ITEM_ENTRY = 9017
 
 -- Ordered list of {label, config, run}. run(player) is each NPC type's
 -- own shared Try<Name>(player) function, reused here rather than
 -- duplicating the access-check-then-summon logic a second time.
+-- icon: GossipOptionIcon value (GossipDef.h) - 1 vendor bag, 2 taxi
+-- (paper airplane), 3 trainer book, 9 crossed swords (battle).
+-- Refer to: https://www.azerothcore.org/wiki/gossip_menu_option
 local OPTIONS = {
-    { label = "Profession Trainer", config = PREMIUM_NPC_CONFIG.PROFESSION_TRAINER, run = function(player) TryProfessionTrainer(player) end },
-    { label = "Heirloom Vendor", config = PREMIUM_NPC_CONFIG.HEIRLOOM_VENDOR, run = function(player) TryHeirloomVendor(player) end },
-    { label = "Class Trainer", config = PREMIUM_NPC_CONFIG.CLASS_TRAINER, run = function(player) TryClassTrainer(player) end },
-    { label = "Teleporter", config = PREMIUM_NPC_CONFIG.TELEPORTER, run = function(player) TryTeleporter(player) end },
+    { label = "Profession Trainer", icon = 3, config = PREMIUM_NPC_CONFIG.PROFESSION_TRAINER, run = function(player) TryProfessionTrainer(player) end },
+    { label = "Heirloom Vendor", icon = 1, config = PREMIUM_NPC_CONFIG.HEIRLOOM_VENDOR, run = function(player) TryHeirloomVendor(player) end },
+    { label = "Class Trainer", icon = 9, config = PREMIUM_NPC_CONFIG.CLASS_TRAINER, run = function(player) TryClassTrainer(player) end },
+    { label = "Teleporter", icon = 2, config = PREMIUM_NPC_CONFIG.TELEPORTER, run = function(player) TryTeleporter(player) end },
 }
 
 -- [playerGuidLow] = the ordered list of options actually shown to that
@@ -55,7 +69,7 @@ local function OnGossipHello(event, player, item)
     for _, option in ipairs(OPTIONS) do
         if IsPremiumNpcAllowed(player, option.config) then
             table.insert(shown, option)
-            player:GossipMenuAddItem(0, option.label, 0, #shown)
+            player:GossipMenuAddItem(option.icon, option.label, 0, #shown)
         end
     end
 
@@ -85,17 +99,21 @@ end
 RegisterItemGossipEvent(ITEM_ENTRY, 1, OnGossipHello) -- GOSSIP_EVENT_ON_HELLO
 RegisterItemGossipEvent(ITEM_ENTRY, 2, OnGossipSelect) -- GOSSIP_EVENT_ON_SELECT
 
+local function GrantPremiumMenuItem(player)
+    if player:AddItem(ITEM_ENTRY, 1) then
+        player:SendBroadcastMessage("You received a Premium Menu item.")
+    else
+        player:SendBroadcastMessage("Could not give you a Premium Menu item - you may already have one, or your inventory is full.")
+    end
+end
+
 local function OnPlayerCommand(event, player, command)
     if command ~= "premium_npc menu" then
         return
     end
 
     if IsPremiumEnabled(player) then
-        if player:AddItem(ITEM_ENTRY, 1) then
-            player:SendBroadcastMessage("You received a Premium Menu item.")
-        else
-            player:SendBroadcastMessage("Could not give you a Premium Menu item - you may already have one, or your inventory is full.")
-        end
+        GrantPremiumMenuItem(player)
     else
         player:SendBroadcastMessage("You don't have access to any premium NPCs.")
     end
@@ -104,3 +122,11 @@ local function OnPlayerCommand(event, player, command)
 end
 
 RegisterPlayerEvent(42, OnPlayerCommand) -- PLAYER_EVENT_ON_COMMAND
+
+local function OnFirstLogin(event, player)
+    if IsPremiumEnabled(player) then
+        GrantPremiumMenuItem(player)
+    end
+end
+
+RegisterPlayerEvent(30, OnFirstLogin) -- PLAYER_EVENT_ON_FIRST_LOGIN
