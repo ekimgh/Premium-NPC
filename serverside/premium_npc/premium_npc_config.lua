@@ -27,4 +27,11 @@ PREMIUM_NPC_CONFIG = {
         SUMMON_DURATION_SECONDS = 120,
         ENABLED = true,
     },
+
+    HEIRLOOM_VENDOR = {
+        KEY = "heirloom",
+        NPC_ID = 900201,
+        SUMMON_DURATION_SECONDS = 120,
+        ENABLED = true,
+    },
 }

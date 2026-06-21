@@ -38,6 +38,10 @@ Three layers, checked in this order (`premium_npc_access.lua`, `IsPremiumNpcAllo
 - `premium_npc_access.lua` - `IsPremiumNpcAllowed(player, npcConfig)`, the three-layer access check described above.
 - One file per NPC type (e.g. `profession_trainer.lua`) - owns only that NPC's summon trigger (the dot-command) and the access check before summoning. Whatever that NPC actually *does* once summoned (trainer spells, vendor items, gossip, etc.) is configured entirely through standard AzerothCore data (`npc_trainer`, `npc_vendor`, gossip tables) against its own `creature_template` entry, not custom Lua logic.
 
-## Roadmap
+### Heirloom Vendor
 
-- Add a Heirloom Vendor NPC here, using the same summon mechanic. (A heirloom vendor currently exists in a separate `mod-roguelite` module with its own compiled C++ summon implementation; the plan is to reimplement it here instead, since `mod-roguelite` is expected to be retired.)
+- Trigger: `.premium_npc heirloom`
+- Model/faction borrowed from the real Enchanter Isian (Heirloom Vendor, entry 35507) - her own row is never modified.
+- `creature_template` entry 900201.
+- Summons next to the player, follows for `PREMIUM_NPC_CONFIG.HEIRLOOM_VENDOR.SUMMON_DURATION_SECONDS` (120s by default), then despawns (or despawns early if a different premium NPC is summoned first).
+- Sells every heirloom-quality (`Quality = 7`) weapon/armor item in `item_template` at its existing `BuyPrice`, with no extra currency, catalog, or unlock gating - a plain `npc_vendor` list (`sql/db-world/04_heirloom_vendor.sql`), no custom purchase logic. Excludes two known non-heirloom anomalies in the base game data (entries 44090, 38691).
