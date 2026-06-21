@@ -26,7 +26,7 @@ Three layers, checked in this order (`premium_npc_access.lua`, `IsPremiumNpcAllo
 - `premium_npc_summon.lua` - the shared summon/follow mechanic, used by every NPC type. Spawns a `TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT` copy of the given creature entry, makes it follow the player, matches its faction to the player's, and despawns any premium NPC that player already has active first.
 - `premium_npc_config.lua` - per-NPC-type settings (entry ID, summon duration, enabled flag, access-control key) plus the two global toggles described above.
 - `premium_npc_access.lua` - `IsPremiumNpcAllowed(player, npcConfig)`, the three-layer access check described above.
-- One file per NPC type (e.g. `profession_trainer.lua`) - owns only that NPC's summon trigger (the dot-command) and the access check before summoning. Whatever that NPC actually *does* once summoned (trainer spells, vendor items, gossip, etc.) is configured entirely through standard AzerothCore data (`npc_trainer`, `npc_vendor`, gossip tables) against its own `creature_template` entry, not custom Lua logic.\
+- One file per NPC type (e.g. `profession_trainer.lua`) - owns only that NPC's summon trigger (the dot-command) and the access check before summoning. Whatever that NPC actually *does* once summoned (trainer spells, vendor items, gossip, etc.) is configured entirely through standard AzerothCore data (`npc_trainer`, `npc_vendor`, gossip tables) against its own `creature_template` entry, not custom Lua logic.
 
 ## Current NPCs
 
@@ -45,3 +45,10 @@ Three layers, checked in this order (`premium_npc_access.lua`, `IsPremiumNpcAllo
 - `creature_template` entry 900201.
 - Summons next to the player, follows for `PREMIUM_NPC_CONFIG.HEIRLOOM_VENDOR.SUMMON_DURATION_SECONDS` (120s by default), then despawns (or despawns early if a different premium NPC is summoned first).
 - Sells every heirloom-quality (`Quality = 7`) weapon/armor item in `item_template` at its existing `BuyPrice`, with no extra currency, catalog, or unlock gating - a plain `npc_vendor` list (`sql/db-world/04_heirloom_vendor.sql`), no custom purchase logic. Excludes two known non-heirloom anomalies in the base game data (entries 44090, 38691).
+
+### Class Trainer
+
+- Trigger: `.premium_npc class`
+- Unlike the other two NPCs, this one needs no new SQL at all: a player can only ever use their own class's spells, so there's nothing to aggregate the way Profession Trainer aggregates every profession into one NPC. Instead, `PREMIUM_NPC_CONFIG.CLASS_TRAINER.ENTRIES` maps the player's class and faction directly to a real, existing class trainer creature (e.g. Warrior Alliance -> entry 5479) and summons a temporary copy of it - same mechanic as the other two, just pointed at real data instead of a custom entry. Death Knight uses a single entry for both factions (the Ebon Hold trainer isn't faction-split like the others).
+- Summons next to the player, follows for `PREMIUM_NPC_CONFIG.CLASS_TRAINER.SUMMON_DURATION_SECONDS` (120s by default), then despawns (or despawns early if a different premium NPC is summoned first).
+- Offers training plus "unlearn talents" and "Dual Talent Specialization" - real class trainers' own dedicated gossip menus include both, unlike profession trainers (confirmed by inspecting several real trainers' `gossip_menu_option` rows directly).
