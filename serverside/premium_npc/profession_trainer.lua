@@ -2,20 +2,17 @@
     Profession Trainer
 
     Summons a temporary "Profession Trainer" NPC (model borrowed from the
-    real Gelman Stonehand) that follows the player and teaches every
-    profession rank-up and recipe from a single window - see
-    premium_npc_summon.lua for the actual summon/follow mechanic, shared
-    with future premium NPCs.
+    real Gelman Stonehand) that follows the player. See
+    premium_npc_summon.lua for the actual summon/follow mechanic.
 
     Trigger: .premium_npc profession (dot-command, same mechanism as
     Paragon's/Prestige's own debug commands - fires via
     PLAYER_EVENT_ON_COMMAND, not a client slash command).
 
-    What this NPC actually teaches (every profession's full rank-up chain
-    and recipe list, combined into one npc_trainer list) is set up purely
-    via SQL against its own creature_template entry - see
-    sql/01_profession_trainer_npc.sql and the forthcoming npc_trainer seed.
-    This file only owns the summon trigger itself.
+    Whatever this NPC teaches is configured entirely through standard
+    npc_trainer rows against its own creature_template entry (900200, see
+    sql/01_profession_trainer_npc.sql) - this file only owns the summon
+    trigger itself, with no trainer-spell logic of its own.
 
     @module profession_trainer
 ]]
