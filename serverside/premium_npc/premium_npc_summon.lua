@@ -59,3 +59,11 @@ function SummonPremiumNpc(player, entry, durationSeconds)
     activeSummonGuid[guid] = npc:GetGUID()
     return true
 end
+
+--- Returns the player's currently active premium NPC's ObjectGuid (any
+-- type), or nil if they don't have one out right now.
+-- @param player Player
+-- @return ObjectGuid|nil
+function GetActivePremiumNpcGuid(player)
+    return activeSummonGuid[player:GetGUIDLow()]
+end
