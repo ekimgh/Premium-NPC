@@ -1,0 +1,21 @@
+# CLAUDE.md
+
+A standalone AzerothCore ALE/Lua module providing summonable "premium" NPCs (Profession Trainer, Heirloom Vendor, Class Trainer, Teleporter, plus a gossip-based menu item that summons any of them). No C++ - everything is server-side Lua loaded by ALE.
+
+**Read `README.md` first - it documents the full architecture, access-control layering, reload mechanics, and every current NPC in detail. This file covers conventions and gotchas the README doesn't, not a duplicate of it.**
+
+## Hard invariants
+
+- **Never modify a real, pre-existing row.** Every NPC here borrows a model/displayId or faction from a real creature (e.g. Profession Trainer borrows Gelman Stonehand's model) without ever touching that creature's own `creature_template` row. The Premium Menu item repurposes a confirmed-orphaned item (zero references anywhere in loot/vendor/quest tables) rather than creating a new `item_template` row. Before reusing *any* existing entry, confirm it's either read-only-borrowed (model/displayId only) or genuinely orphaned (query for references first) - don't assume.
+- **Never duplicate the access-check-then-summon logic.** Every caller (dot-command, the menu item) goes through that NPC type's own shared `Try<Name>(player)` function (`TryProfessionTrainer`, `TryHeirloomVendor`, etc.), which itself calls `IsPremiumNpcAllowed`. If you're writing a new entry point for an existing NPC type, call the existing `Try<Name>` - don't re-implement the check.
+- **Custom `creature_template` entries use the `9002xx` range** (900200-900202 so far; next new one is 900203). Keep using this range for consistency, and remember new entries need a full worldserver restart to be picked up (not `.reload ale`, not `.reload creature_template`).
+
+## Gotchas already hit and fixed - don't re-discover these
+
+- **A gossip menu with exactly one option, no popup string, and no code, gets auto-selected by the client instead of ever being shown.** Confirmed via tracing the actual client/server gossip flow, not assumed. Any new gossip menu in this project needs to guarantee 2+ options (or a popup confirmation) on every code path, even ones that seem like they'd "obviously" only ever have one entry (e.g. a filtered list down to a single allowed item) - this has bitten this project before (see `premium_menu_item.lua`'s filtering logic for the pattern that avoids it).
+- **Return-value semantics differ between creature and item gossip hooks, and they're opposite.** For `RegisterCreatureGossipEvent` hooks, returning `true` suppresses the native `PrepareGossipMenu`/`SendPreparedGossip` flow - you only return `true` once you've sent your own menu. For `RegisterItemGossipEvent` hooks, returning `false` suppresses the item's attached on-use spell from casting (used in `premium_menu_item.lua` to stop its required placeholder spell from actually firing). Don't assume one convention applies to both.
+- **The native Trainer window only ever sends its spell list once per "session"; it does not reliably redraw colors after you learn something mid-session**, even though the server-side state (`Trainer::GetSpellState`) is recomputed correctly every time and the actual purchase gate is never wrong. `profession_trainer.lua`'s `OnPlayerLearnSpell` handler works around this by forcing the window to close (an immediate `SendTrainerList` resend, no delay) rather than trying to refresh it in place - a delayed resend was tried first and silently did nothing (client ignored the second list), so don't re-attempt an in-place refresh without revisiting that history first.
+
+## Verify against current source, don't guess
+
+This project's reliability has come from checking real source/data before relying on it, not from general WoW knowledge - aura/spell IDs, gossip semantics, icon names, and reload behavior have all had at least one "looked right but was wrong" moment this way. Before relying on any spell/aura ID, icon name, or hook signature: check it against the installed `acore_world` database or `ScriptMgr.h`/ALE's `LuaEngine/methods/` directly rather than trusting memory or an external reference. If something can't be verified (e.g. no `SpellIcon.dbc` mirror table exists in this database, so icon *names* can't be cross-checked via SQL), say so explicitly rather than asserting confidence that isn't backed by a real check.
