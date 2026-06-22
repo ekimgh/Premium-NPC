@@ -22,8 +22,8 @@
     access-check-then-summon logic as its own dot-command, by calling
     that NPC type's own shared Try<Name>(player) function (defined in its
     own file - profession_trainer.lua, heirloom_vendor.lua,
-    class_trainer.lua, teleporter.lua) - not a separate copy of that
-    logic.
+    glyph_vendor.lua, class_trainer.lua, teleporter.lua) - not a separate
+    copy of that logic.
 
     Both gossip hooks return false, which (confirmed via
     WorldSession::HandleUseItemOpcode in core source) suppresses the
@@ -53,6 +53,7 @@ local ITEM_ENTRY = 9017
 local OPTIONS = {
     { label = "Profession Trainer", icon = 3, config = PREMIUM_NPC_CONFIG.PROFESSION_TRAINER, run = function(player) TryProfessionTrainer(player) end },
     { label = "Heirloom Vendor", icon = 1, config = PREMIUM_NPC_CONFIG.HEIRLOOM_VENDOR, run = function(player) TryHeirloomVendor(player) end },
+    { label = "Glyph Vendor", icon = 4, config = PREMIUM_NPC_CONFIG.GLYPH_VENDOR, run = function(player) TryGlyphVendor(player) end },
     { label = "Class Trainer", icon = 9, config = PREMIUM_NPC_CONFIG.CLASS_TRAINER, run = function(player) TryClassTrainer(player) end },
     { label = "Teleporter", icon = 2, config = PREMIUM_NPC_CONFIG.TELEPORTER, run = function(player) TryTeleporter(player) end },
 }

@@ -52,6 +52,15 @@ Note: access is only checked when summoning - once an NPC is out, anyone nearby 
 - Sells every heirloom-quality (`Quality = 7`) weapon/armor item in `item_template` at its existing `BuyPrice`, with no extra currency, catalog, or unlock gating - a plain `npc_vendor` list (`sql/db-world/04_heirloom_vendor.sql`), no custom purchase logic. Excludes two known non-heirloom anomalies in the base game data (entries 44090, 38691).
 - Also repairs equipped gear (`UNIT_NPC_FLAG_REPAIR`), at the normal gold cost the engine computes per item's own durability loss.
 
+### Glyph Vendor
+
+- Trigger: `.premium_npc glyph`
+- Model/faction borrowed from the real Librarian Ingram (Inscription Supplies vendor, entry 27143) - her own row is never modified.
+- `creature_template` entries 900203-900212, one per class (`PREMIUM_NPC_CONFIG.GLYPH_VENDOR.ENTRIES`) - unlike every other NPC type here, which class gets summoned depends on the player's own class, similar to Class Trainer (but keyed by class only, not class+faction - glyphs aren't faction-specific).
+- Summons next to the player, follows for `PREMIUM_NPC_CONFIG.GLYPH_VENDOR.SUMMON_DURATION_SECONDS` (120s by default), then despawns (or despawns early if a different premium NPC is summoned first).
+- Each entry's `npc_vendor` list (`sql/db-world/07_glyph_vendor.sql`) holds only that one class's real glyphs (`class = 16` in `item_template`) at their existing `BuyPrice`, no extra currency or gating - otherwise as plain as Heirloom Vendor's. Ten entries instead of one shared entry because `VendorItemData::GetItemCount()` (core's `CreatureData.h`) returns `uint8` - a single creature's *stored* `npc_vendor` list silently truncates at 255 total rows, well below all ten classes' glyphs combined (353 real glyphs, after excluding 11 known Blizzard junk rows). An earlier version tried one shared entry filtered per-player via the `conditions` table (`CONDITION_SOURCE_TYPE_NPC_VENDOR` + `CONDITION_CLASS`) - which does correctly stay under the *display* cap (150 items) - but the storage-level truncation happens before any of that filtering runs, so some classes saw an empty vendor window. Confirmed live, not just in theory.
+- Sold glyphs are real, unmodified glyph items (`bonding = 0`, same as the base game) - never soulbound by any code in this module. A server that wants purchases from this vendor to bind should do so with its own data, not by patching this module: clone the desired glyph entries into new, server-owned `item_template` rows with `bonding` set to whatever bind behavior is wanted, then point `07_glyph_vendor.sql`'s `npc_vendor` insert at those entries instead of the real ones. Keeps the binding decision a per-server data choice rather than module logic every fork inherits.
+
 ### Class Trainer
 
 - Trigger: `.premium_npc class`

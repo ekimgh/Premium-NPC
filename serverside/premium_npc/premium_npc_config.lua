@@ -35,6 +35,35 @@ PREMIUM_NPC_CONFIG = {
         ENABLED = true,
     },
 
+    GLYPH_VENDOR = {
+        KEY = "glyph",
+        SUMMON_DURATION_SECONDS = 120,
+        ENABLED = true,
+
+        -- One creature_template entry per class rather than one shared
+        -- entry for all ten - VendorItemData::GetItemCount() (core's
+        -- CreatureData.h) returns uint8, so a single creature's *stored*
+        -- npc_vendor list silently truncates at 255 total rows, before
+        -- any per-player filtering runs. All ten classes' glyphs
+        -- combined (353) blow past that. Same per-class ENTRIES pattern
+        -- Class Trainer uses below, just keyed by class only - glyphs
+        -- aren't faction-specific. classId matches the standard Classes
+        -- (1 Warrior, 2 Paladin, 3 Hunter, 4 Rogue, 5 Priest,
+        -- 6 Death Knight, 7 Shaman, 8 Mage, 9 Warlock, 11 Druid).
+        ENTRIES = {
+            [1]  = 900203, -- Warrior
+            [2]  = 900204, -- Paladin
+            [3]  = 900205, -- Hunter
+            [4]  = 900206, -- Rogue
+            [5]  = 900207, -- Priest
+            [6]  = 900208, -- Death Knight
+            [7]  = 900209, -- Shaman
+            [8]  = 900210, -- Mage
+            [9]  = 900211, -- Warlock
+            [11] = 900212, -- Druid
+        },
+    },
+
     CLASS_TRAINER = {
         KEY = "class",
         SUMMON_DURATION_SECONDS = 120,
