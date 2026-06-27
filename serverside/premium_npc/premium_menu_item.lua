@@ -37,6 +37,17 @@
     character's first ever login, if premium is enabled for that account
     at that moment.
 
+    Profession Trainer is a special case in this top-level menu: instead
+    of summoning directly, picking it shows a second gossip menu (still
+    sourced from this same item, same gossip session) listing all 14
+    professions in PREMIUM_NPC_CONFIG.PROFESSION_TRAINER.PROFESSIONS -
+    picking one of those calls TryProfessionTrainer(player, key) directly.
+    This avoids needing an intermediate "which profession?" NPC the
+    player would have to summon and then re-gossip with just to reach the
+    actual trainer. The two menu levels are told apart by gossip sender
+    (TOP_SENDER vs PROFESSION_SENDER below), not by separate per-player
+    state - intid alone isn't unique across levels, sender is.
+
     @module premium_menu_item
 ]]
 
@@ -44,25 +55,31 @@ dofile("lua_scripts/premium_npc/premium_npc_config.lua")
 
 local ITEM_ENTRY = 9017
 
--- Ordered list of {label, config, run}. run(player) is each NPC type's
--- own shared Try<Name>(player) function, reused here rather than
--- duplicating the access-check-then-summon logic a second time.
+local TOP_SENDER = 0
+local PROFESSION_SENDER = 1
+
+-- Ordered list of {label, icon, config, run|isProfessionTrainer}.
+-- run(player) is each NPC type's own shared Try<Name>(player) function,
+-- reused here rather than duplicating the access-check-then-summon logic
+-- a second time. Profession Trainer has no run - it's handled specially
+-- in OnGossipSelect below (shows the profession submenu instead).
 -- icon: GossipOptionIcon value (GossipDef.h) - 1 vendor bag, 2 taxi
 -- (paper airplane), 3 trainer book, 9 crossed swords (battle).
 -- Refer to: https://www.azerothcore.org/wiki/gossip_menu_option
 local OPTIONS = {
-    { label = "Profession Trainer", icon = 3, config = PREMIUM_NPC_CONFIG.PROFESSION_TRAINER, run = function(player) TryProfessionTrainer(player) end },
+    { label = "Profession Trainer", icon = 3, config = PREMIUM_NPC_CONFIG.PROFESSION_TRAINER, isProfessionTrainer = true },
     { label = "Heirloom Vendor", icon = 1, config = PREMIUM_NPC_CONFIG.HEIRLOOM_VENDOR, run = function(player) TryHeirloomVendor(player) end },
     { label = "Glyph Vendor", icon = 4, config = PREMIUM_NPC_CONFIG.GLYPH_VENDOR, run = function(player) TryGlyphVendor(player) end },
     { label = "Class Trainer", icon = 9, config = PREMIUM_NPC_CONFIG.CLASS_TRAINER, run = function(player) TryClassTrainer(player) end },
     { label = "Teleporter", icon = 2, config = PREMIUM_NPC_CONFIG.TELEPORTER, run = function(player) TryTeleporter(player) end },
 }
 
--- [playerGuidLow] = the ordered list of options actually shown to that
--- player on their last OnGossipHello, so OnGossipSelect can map their
--- chosen intid back to the right one. Keyed per-player, not global -
--- two different players using this item around the same time must not
--- clobber each other's shown list.
+-- [playerGuidLow] = the ordered list of top-level options actually shown
+-- to that player on their last OnGossipHello, so OnGossipSelect can map
+-- their chosen intid back to the right one. Keyed per-player, not global
+-- - two different players using this item around the same time must not
+-- clobber each other's shown list. The profession submenu doesn't need
+-- this - it always lists every entry in PROFESSIONS, nothing filtered.
 local shownOptionsByPlayer = {}
 
 local function OnGossipHello(event, player, item)
@@ -70,7 +87,7 @@ local function OnGossipHello(event, player, item)
     for _, option in ipairs(OPTIONS) do
         if IsPremiumNpcAllowed(player, option.config) then
             table.insert(shown, option)
-            player:GossipMenuAddItem(option.icon, option.label, 0, #shown)
+            player:GossipMenuAddItem(option.icon, option.label, TOP_SENDER, #shown)
         end
     end
 
@@ -85,11 +102,31 @@ local function OnGossipHello(event, player, item)
     return false
 end
 
+local function ShowProfessionSubmenu(player, item)
+    for index, profession in ipairs(PREMIUM_NPC_CONFIG.PROFESSION_TRAINER.PROFESSIONS) do
+        player:GossipMenuAddItem(3, profession.label, PROFESSION_SENDER, index) -- icon 3 = trainer book
+    end
+    player:GossipSendMenu(900200, item) -- sql/db-world/06_premium_menu_item.sql
+end
+
 local function OnGossipSelect(event, player, item, sender, intid)
-    player:GossipComplete()
+    if sender == PROFESSION_SENDER then
+        player:GossipComplete()
+        local profession = PREMIUM_NPC_CONFIG.PROFESSION_TRAINER.PROFESSIONS[intid]
+        if profession then
+            TryProfessionTrainer(player, profession.key)
+        end
+        return false
+    end
 
     local shown = shownOptionsByPlayer[player:GetGUIDLow()]
     local option = shown and shown[intid]
+    if option and option.isProfessionTrainer then
+        ShowProfessionSubmenu(player, item)
+        return false
+    end
+
+    player:GossipComplete()
     if option then
         option.run(player)
     end

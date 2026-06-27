@@ -1,35 +1,43 @@
 --[[
     Profession Trainer
 
-    Summons a temporary "Profession Trainer" NPC (model borrowed from the
-    real Gelman Stonehand) that follows the player. See
-    premium_npc_summon.lua for the actual summon/follow mechanic and
-    premium_npc_access.lua for the enable/disable and per-account access
-    checks applied below.
+    Summons a temporary profession trainer NPC that follows the player,
+    picked by profession key rather than a single fixed entry - see
+    PREMIUM_NPC_CONFIG.PROFESSION_TRAINER.PROFESSIONS in premium_npc_config.lua
+    for the full key -> creature_template entry list and why each entry is
+    one of this module's own creatures rather than a real one reused
+    directly. See premium_npc_summon.lua for the actual summon/follow
+    mechanic and premium_npc_access.lua for the enable/disable and
+    per-account access checks applied below.
 
-    Trigger: .premium_npc profession (dot-command, same mechanism as
-    Paragon's/Prestige's own debug commands - fires via
-    PLAYER_EVENT_ON_COMMAND, not a client slash command). Returning false
-    once the command is recognized as ours suppresses the core's "unknown
-    command" message - without it, the summon still works but the client
-    also reports the command as not existing.
+    Trigger: .premium_npc profession <key> (e.g. ".premium_npc profession
+    blacksmithing") - dot-command, same mechanism as Paragon's/Prestige's
+    own debug commands, fires via PLAYER_EVENT_ON_COMMAND, not a client
+    slash command. Returning false once the command is recognized as ours
+    suppresses the core's "unknown command" message. With no key (or an
+    unrecognized one), prints the list of valid keys instead of summoning
+    anything - there's no native UI a bare dot-command can show a picker
+    through, unlike the Premium Menu item (premium_menu_item.lua), which
+    builds its own profession submenu directly in its existing gossip
+    instead of going through this command at all.
 
-    Whatever this NPC teaches is configured entirely through the
-    trainer/trainer_spell/creature_default_trainer tables against its own
-    creature_template entry (900200, see sql/db-world/01_profession_trainer_npc.sql
-    and 02_profession_trainer_spells.sql) - this file has no trainer-spell
-    logic of its own beyond the workaround below.
+    Whatever each profession's trainer teaches is configured entirely
+    through its own creature_template entry's trainer/trainer_spell rows
+    (sql/db-world/02_profession_trainer_spells.sql) - this file has no
+    trainer-spell logic of its own beyond the workaround below.
 
-    Workaround: the server only ever sends the trainer's spell list once,
+    Workaround: the server only ever sends a trainer's spell list once,
     when the window is first opened (core's own WorldSession::SendTrainerList,
     called from CMSG_TRAINER_LIST) - it never resends it after a successful
     teach. The client is left to recolor the remaining entries on its own
-    from locally-tracked state, and on a full profession's recipe list this
-    is unreliable - other recipes can show green (available) after learning
+    from locally-tracked state, and on a large recipe list this is
+    unreliable - other recipes can show green (available) after learning
     one, even though the actual purchase still correctly fails server-side
     (Trainer::CanTeachSpell re-checks fresh, so nothing is exploitable, it's
     a display bug only). Forcing a fresh SendTrainerList after every learn
-    makes the client redraw with current, correct data instead.
+    makes the client redraw with current, correct data instead. Applies to
+    every profession's trainer here - all 14 have large recipe lists, not
+    just the old single all-professions NPC.
 
     @module profession_trainer
 ]]
@@ -38,24 +46,46 @@ dofile("lua_scripts/premium_npc/premium_npc_config.lua")
 
 local CONFIG = PREMIUM_NPC_CONFIG.PROFESSION_TRAINER
 
---- Checks access and summons the Profession Trainer if allowed, messaging
--- the player either way. Shared by the .premium_npc profession command
--- and premium_menu_item.lua's item-based menu.
-function TryProfessionTrainer(player)
-    local allowed, reason = IsPremiumNpcAllowed(player, CONFIG)
-    if allowed then
-        SummonPremiumNpc(player, CONFIG.NPC_ID, CONFIG.SUMMON_DURATION_SECONDS)
-    else
-        player:SendBroadcastMessage(reason)
-    end
+-- key -> profession entry (table), and entry id -> true, built once.
+local professionsByKey = {}
+local professionEntries = {}
+for _, profession in ipairs(CONFIG.PROFESSIONS) do
+    professionsByKey[profession.key] = profession
+    professionEntries[profession.entry] = true
 end
 
-local function OnPlayerCommand(event, player, command)
-    if command ~= "premium_npc profession" then
+--- Checks access and summons the given profession's trainer if allowed,
+-- messaging the player either way. With no professionKey (or one that
+-- doesn't match PROFESSIONS), messages the list of valid keys instead of
+-- summoning anything. Shared by the .premium_npc profession command and
+-- premium_menu_item.lua's item-based profession submenu.
+function TryProfessionTrainer(player, professionKey)
+    local allowed, reason = IsPremiumNpcAllowed(player, CONFIG)
+    if not allowed then
+        player:SendBroadcastMessage(reason)
         return
     end
 
-    TryProfessionTrainer(player)
+    local profession = professionKey and professionsByKey[professionKey]
+    if not profession then
+        local keys = {}
+        for _, p in ipairs(CONFIG.PROFESSIONS) do
+            table.insert(keys, p.key)
+        end
+        player:SendBroadcastMessage("Usage: .premium_npc profession <name>. Available: " .. table.concat(keys, ", "))
+        return
+    end
+
+    SummonPremiumNpc(player, profession.entry, CONFIG.SUMMON_DURATION_SECONDS)
+end
+
+local function OnPlayerCommand(event, player, command)
+    local professionKey = command:match("^premium_npc profession%s+(%S+)$")
+    if not professionKey and command ~= "premium_npc profession" then
+        return
+    end
+
+    TryProfessionTrainer(player, professionKey)
     return false
 end
 
@@ -71,12 +101,12 @@ RegisterPlayerEvent(42, OnPlayerCommand) -- PLAYER_EVENT_ON_COMMAND
 -- instead (most likely the client reacting to an unprompted list arriving
 -- mid-transaction), and a fresh open afterward is confirmed to always
 -- show correct colors, so this leans into that rather than fighting it -
--- the recipe list is large enough on this trainer that leaving it open
--- with wrong colors is worse than having to reopen it. Fires for every
--- spell learn, not just ones taught here; harmless if the player's
--- premium NPC isn't actually a Profession Trainer they're currently
--- looking at, since SendTrainerList has no visible effect if that
--- window isn't open.
+-- profession recipe lists are large enough that leaving one open with
+-- wrong colors is worse than having to reopen it. Fires for every spell
+-- learn, not just ones taught here; harmless if the player's premium NPC
+-- isn't actually one of our profession trainers they're currently looking
+-- at, since SendTrainerList has no visible effect if that window isn't
+-- open.
 local function OnPlayerLearnSpell(event, player, spellId)
     local npcGuid = GetActivePremiumNpcGuid(player)
     if not npcGuid then
@@ -84,7 +114,7 @@ local function OnPlayerLearnSpell(event, player, spellId)
     end
 
     local npc = player:GetMap():GetWorldObject(npcGuid)
-    if not npc or npc:GetEntry() ~= CONFIG.NPC_ID or not npc:IsTrainer() then
+    if not npc or not professionEntries[npc:GetEntry()] or not npc:IsTrainer() then
         return
     end
 

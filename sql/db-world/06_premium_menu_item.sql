@@ -11,6 +11,9 @@
 -- book/tome icon) - confirmed by reading the client's own cached
 -- Item.dbc directly. Client and server data already agree, so no binary
 -- Item.dbc patch is needed at all.
+--
+-- TotemCategory 161 below is the same value as the real Gnomish Army
+-- Knife (entry 40772) - makes this item double as a profession multitool.
 
 REPLACE INTO `item_template` (
     `entry`, `class`, `subclass`, `SoundOverrideSubclass`, `name`, `displayid`, `Quality`, `Flags`, `FlagsExtra`,
@@ -48,7 +51,7 @@ REPLACE INTO `item_template` (
     0, 0, 0, 0, -1, 0, -1,
     0, 0, 0, 0, -1, 0, -1,
     1, 'Use to access your premium services.', 0, 0, 0, 0, 0, -1, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 161,
     0, 0, 0, 0, 0, 0,
     0, 0, -1, 0, 0, 0,
     0, '', 0, 0, 0, 0, 0, 0
@@ -59,3 +62,12 @@ REPLACE INTO `item_template` (
 DELETE FROM `npc_text` WHERE `ID` = 900203;
 INSERT INTO `npc_text` (`ID`, `text0_0`) VALUES
 (900203, 'What would you like to do?');
+
+-- Gossip header text shown above the profession submenu
+-- (premium_menu_item.lua's ShowProfessionSubmenu). ID 900200 used to be
+-- the now-retired Profession Trainer hub creature's own entry/npc_text -
+-- npc_text and creature_template are separate ID spaces, and no creature
+-- uses 900200 anymore, so reusing the number here isn't a collision.
+DELETE FROM `npc_text` WHERE `ID` = 900200;
+INSERT INTO `npc_text` (`ID`, `text0_0`) VALUES
+(900200, 'Which profession would you like to train?');

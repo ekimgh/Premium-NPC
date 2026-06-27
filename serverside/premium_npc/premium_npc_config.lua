@@ -23,9 +23,46 @@ PREMIUM_NPC_CONFIG = {
 
     PROFESSION_TRAINER = {
         KEY = "profession",
-        NPC_ID = 900200,
         SUMMON_DURATION_SECONDS = 120,
         ENABLED = true,
+
+        -- Picking a profession (via .premium_npc profession <key>, or the
+        -- Premium Menu item's own profession submenu) summons its entry
+        -- directly - no intermediate "which profession?" NPC needed,
+        -- since the item already has its own gossip to ask from and the
+        -- dot-command takes the key as an argument.
+        --
+        -- Every entry is one of this module's own creature_template rows
+        -- (900213-900226, sql/db-world/02_profession_trainer_spells.sql),
+        -- each a standalone trainer for that profession's full 0/1-to-max
+        -- skill chain, sliced from the same aggregated-from-every-real-
+        -- trainer data this module's old single all-professions NPC used
+        -- to use in full. An earlier draft of this redesign tried
+        -- summoning a real, existing "Grand Master" trainer creature
+        -- directly instead (no new SQL at all) for every profession whose
+        -- own trainer_spell data happened to already cover the entire
+        -- range - reverted, because this server's real "Grand Master"
+        -- trainer data turned out to be of unverifiable provenance (see
+        -- the comment at the top of 02_profession_trainer_spells.sql) and
+        -- didn't match Wowhead's retail reference for at least one
+        -- profession. Building all 14 from this module's own
+        -- already-trusted aggregate avoids depending on that.
+        PROFESSIONS = {
+            { key = "alchemy",        label = "Alchemy",        entry = 900213 },
+            { key = "enchanting",     label = "Enchanting",     entry = 900214 },
+            { key = "blacksmithing",  label = "Blacksmithing",  entry = 900215 },
+            { key = "cooking",        label = "Cooking",        entry = 900216 },
+            { key = "engineering",    label = "Engineering",    entry = 900217 },
+            { key = "firstaid",       label = "First Aid",      entry = 900218 },
+            { key = "fishing",        label = "Fishing",        entry = 900219 },
+            { key = "herbalism",      label = "Herbalism",      entry = 900220 },
+            { key = "inscription",    label = "Inscription",    entry = 900221 },
+            { key = "jewelcrafting",  label = "Jewelcrafting",  entry = 900222 },
+            { key = "leatherworking", label = "Leatherworking", entry = 900223 },
+            { key = "mining",         label = "Mining",         entry = 900224 },
+            { key = "skinning",       label = "Skinning",       entry = 900225 },
+            { key = "tailoring",      label = "Tailoring",      entry = 900226 },
+        },
     },
 
     HEIRLOOM_VENDOR = {
